@@ -1,4 +1,6 @@
-Setup:
-  pip install -r requirements.txt
-Run:
-  python app.py
+```markdown
+**Setup & Run**
+
+```bash
+pip install -r requirements.txt
+python app.py
