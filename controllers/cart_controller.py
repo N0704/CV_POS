@@ -1,12 +1,11 @@
 from flask import jsonify
-from services.barcode_scanner import BarcodeScanner
 from models.order_model import OrderModel
 
 class CartController:
     def __init__(self, barcode_scanner):
         self.barcode_scanner = barcode_scanner
         self.order_model = OrderModel()
-    
+
     def get_cart(self):
         cart = self.barcode_scanner.get_cart()
         return jsonify(cart)
@@ -23,3 +22,11 @@ class CartController:
         order_id = self.order_model.save_order(cart)
         self.barcode_scanner.clear_cart()
         return jsonify({"message": "Đã lưu đơn hàng", "order_id": order_id})
+    
+    def update_quantity(self, barcode, qty):
+        self.barcode_scanner.update_quantity(barcode, qty)
+        return jsonify({"success": True, "cart": self.barcode_scanner.get_cart()})
+
+    def remove_item(self, barcode):
+        self.barcode_scanner.remove_item(barcode)
+        return jsonify({"success": True, "cart": self.barcode_scanner.get_cart()})

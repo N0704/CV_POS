@@ -13,7 +13,7 @@ class Database:
         self.conn = pyodbc.connect(
             "DRIVER={ODBC Driver 17 for SQL Server};"
             "SERVER=localhost;"
-            "DATABASE=ShopDB;"
+            "DATABASE=POS_DB;"
             "UID=sa;PWD=123456"
         )
         self.cursor = self.conn.cursor()
