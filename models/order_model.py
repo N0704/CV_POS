@@ -61,6 +61,18 @@ class OrderModel:
             for r in rows
     ]
 
+    def get_order_by_id(self, order_id):
+        cursor = self.db.get_cursor()
+        cursor.execute("SELECT OrderID, TotalAmount, OrderDate FROM Orders WHERE OrderID=?", (order_id,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "total": float(row[1]),
+                "order_date": row[2].strftime("%Y-%m-%d %H:%M:%S")
+            }
+        return None
+
     def get_order_details(self, order_id):
         cursor = self.db.get_cursor()
         cursor.execute("""

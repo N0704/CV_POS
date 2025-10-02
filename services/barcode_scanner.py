@@ -61,14 +61,29 @@ class BarcodeScanner:
 
     # ---------- Barcode ----------
     def scan_barcodes(self, frame):
-        """Quét tất cả barcode trong 1 frame"""
-        for b in decode(frame):
-            now = time.time()
-            if now - self.last_scan < self.cooldown:
-                continue
+        now = time.time()
+        if now - self.last_scan < self.cooldown:
+            return None, None
+        
+        barcodes = decode(frame)
+        
+        if not barcodes:
+            enhanced = cv2.convertScaleAbs(frame, alpha=1.5, beta=40)  
+            barcodes = decode(enhanced)
 
+        if not barcodes:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            equalized = cv2.equalizeHist(gray)
+            barcodes = decode(equalized)
+
+        if barcodes:
+            b = barcodes[0]
             barcode = b.data.decode("utf-8")
             product = self.product_model.get_product_by_barcode(barcode)
+
+            (x, y, w, h) = b.rect
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
             if product:
                 self._add_to_cart(barcode, product)
                 self._beep()
@@ -76,6 +91,7 @@ class BarcodeScanner:
                 return barcode, product["name"]
 
         return None, None
+
 
     def _beep(self):
         """Âm báo sau khi quét thành công"""

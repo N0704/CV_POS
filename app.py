@@ -70,6 +70,10 @@ def remove_cart_item(barcode):
 def checkout():
     return cart_controller.checkout()
 
+@app.route("/invoice/<order_id>")
+def invoice(order_id):
+    return cart_controller.get_invoice_data(order_id)
+
 # Barcode routes
 @app.route('/video_feed')
 def video_feed():
