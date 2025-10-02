@@ -1,5 +1,6 @@
 class OrderSystem {
     constructor() {
+        this.cartInterval = null;
         this.init();
     }
 
@@ -10,8 +11,7 @@ class OrderSystem {
         this.setupEventListeners();
         this.loadOrder();
 
-        setInterval(() => this.updateCurrentTime(), 1000);
-        setInterval(() => this.loadCart(), 1000);
+        setInterval(() => this.updateCurrentTime(), 1000);  
     }
 
     // ----------------- Helpers -----------------
@@ -218,6 +218,18 @@ class OrderSystem {
     
 
     // ----------------- Cart actions -----------------
+    startCartAutoRefresh() {
+        if (this.cartInterval) return; // tránh tạo trùng
+        this.cartInterval = setInterval(() => this.loadCart(), 1000);
+    }
+
+    stopCartAutoRefresh() {
+        if (this.cartInterval) {
+            clearInterval(this.cartInterval);
+            this.cartInterval = null;
+        }
+    }
+
     async loadCart() {
         const cart = await this.request("/cart");
         this.updateCartDisplay(cart);
@@ -233,10 +245,98 @@ class OrderSystem {
         this.loadCart();
     }
 
+    async exportInvoicePDF(orderId) {
+        try {
+            // Gọi API lấy chi tiết hóa đơn
+            const data = await this.request(`/invoice/${orderId}`);
+    
+            // Tạo div tạm để render hóa đơn
+            const tempDiv = document.createElement("div");
+            tempDiv.style.padding = "20px";
+            tempDiv.style.background = "white";
+            tempDiv.style.color = "black";
+            tempDiv.style.fontFamily = "Arial, sans-serif";
+            tempDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; color: #000;">HÓA ĐƠN BÁN HÀNG</h2>
+                    <hr style="border: 1px solid #000; margin: 10px 0;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <p style="margin: 5px 0;"><strong>Mã đơn hàng:</strong> ${orderId}</p>
+                    <p style="margin: 5px 0;"><strong>Ngày đặt hàng:</strong> ${data.order.order_date}</p>
+                </div>
+    
+                <table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #000;">
+                    <thead>
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Sản phẩm</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: center;">Mã vạch</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: center;">Số lượng</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: right;">Đơn giá</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: right;">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.items.map(item => `
+                            <tr>
+                                <td style="border: 1px solid #000; padding: 8px;">${item.name}</td>
+                                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.barcode}</td>
+                                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.quantity}</td>
+                                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.formatCurrency(item.price)}₫</td>
+                                <td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">${this.formatCurrency(item.total)}₫</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+    
+                <div style="text-align: right; margin-top: 20px;">
+                    <p style="font-size: 16px; font-weight: bold; margin: 0;">
+                        Tổng cộng: ${this.formatCurrency(data.order.total)}₫
+                    </p>
+                </div>
+            `;
+            document.body.appendChild(tempDiv);
+    
+            // Xuất PDF bằng html2pdf.js
+            html2pdf()
+                .set({
+                    margin: 10,
+                    filename: `${orderId}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: "#FFFFFF"
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                })
+                .from(tempDiv)
+                .save()
+                .finally(() => {
+                    if (tempDiv.parentNode) {
+                        tempDiv.remove();
+                    }
+                });
+    
+        } catch (err) {
+            console.error("Lỗi xuất PDF:", err);
+            this.showToast("Lỗi PDF", "Không thể xuất hóa đơn PDF.", "error");
+        }
+    }
+
     async checkout() {
         const result = await this.request("/checkout", { method: "POST" });
-        this.showToast("Lưu thành công!", `Đơn hàng ${result.order_id} đã được tạo!`, "success");
-        this.loadCart();
+        if (result?.order_id) {
+            this.showToast("Thanh toán thành công!", `Đơn hàng ${result.order_id} đã được tạo!`, "success");
+    
+            // Tải hóa đơn PDF
+            this.exportInvoicePDF(result.order_id);
+    
+            this.loadCart();
+        } else {
+            this.showToast("Thanh toán thất bại!", "Vui lòng thử lại sau.", "error");
+        }
     }
 
     async removeItem(barcode) {
@@ -273,6 +373,7 @@ class OrderSystem {
                     loader.classList.remove("flex");
                 }
                 camEl.classList.remove("hidden");
+                this.startCartAutoRefresh();
             };
     
             camEl.onerror = () => {
@@ -294,6 +395,7 @@ class OrderSystem {
         if (videoFeed) {
             videoFeed.src = "";
         }
+        this.stopCartAutoRefresh();
     }
 
     // ----------------- Modal -----------------
