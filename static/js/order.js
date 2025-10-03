@@ -153,27 +153,35 @@ class OrderSystem {
 
     updateCartDisplay(cart) {
         const tbody = document.querySelector("#orderNewModal tbody");
-        const totalEl = document.querySelector("#orderNewModal .text-lg.font-bold");
-        if (!tbody || !totalEl) return;
-
+        const totalEls = document.querySelectorAll("#orderNewModal .totalPayment"); 
+        if (!tbody || totalEls.length === 0) return;
+    
         if (!cart || Object.keys(cart).length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-neutral-500">Chưa có sản phẩm nào</td></tr>`;
-            totalEl.textContent = "0₫";
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-neutral-500">Chưa có sản phẩm nào</td></tr>`;
+            totalEls.forEach(el => el.textContent = "0₫");
             return;
         }
-
+    
         let total = 0;
         let rows = "";
-
-        for (const [barcode, item] of Object.entries(cart)) {
+    
+        Object.entries(cart).forEach(([barcode, item], index) => {
             total += item.total || 0;
-            rows += this.renderCartRow(barcode, item);
-        }
-
+            rows += this.renderCartRow(barcode, item, index);
+        });
+    
         tbody.innerHTML = rows;
-        if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
-        totalEl.textContent = this.formatCurrency(total) + "₫";
+    
+        // Cập nhật tất cả .totalPayment
+        totalEls.forEach(el => {
+            el.textContent = this.formatCurrency(total) + "₫";
+        });
+    
+        if (typeof lucide !== "undefined" && lucide.createIcons) {
+            lucide.createIcons();
+        }
     }
+    
 
     // ----------------- Toast Notification -----------------
     showToast(title, message, type = "success", duration = 3000) {
@@ -271,7 +279,6 @@ class OrderSystem {
                     <thead>
                         <tr style="background: #f0f0f0;">
                             <th style="border: 1px solid #000; padding: 8px; text-align: left;">Sản phẩm</th>
-                            <th style="border: 1px solid #000; padding: 8px; text-align: center;">Mã vạch</th>
                             <th style="border: 1px solid #000; padding: 8px; text-align: center;">Số lượng</th>
                             <th style="border: 1px solid #000; padding: 8px; text-align: right;">Đơn giá</th>
                             <th style="border: 1px solid #000; padding: 8px; text-align: right;">Thành tiền</th>
@@ -281,7 +288,6 @@ class OrderSystem {
                         ${data.items.map(item => `
                             <tr>
                                 <td style="border: 1px solid #000; padding: 8px;">${item.name}</td>
-                                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.barcode}</td>
                                 <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.quantity}</td>
                                 <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.formatCurrency(item.price)}₫</td>
                                 <td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">${this.formatCurrency(item.total)}₫</td>
