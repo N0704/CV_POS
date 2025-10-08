@@ -19,26 +19,22 @@ class OrderModel:
             if not cursor.fetchone():
                 break
 
-        # Insert Orders
         cursor.execute(
             "INSERT INTO Orders(OrderID, TotalAmount, OrderDate) VALUES (?, ?, GETDATE())",
             (order_id, total_amount)
         )
 
-        # Insert OrderDetails & giảm stock
         for barcode, item in cart.items():
             cursor.execute("SELECT ProductID, Stock FROM Products WHERE Barcode=?", (barcode,))
             row = cursor.fetchone()
             if row:
                 product_id = row[0]
 
-                # Insert OrderDetails
                 cursor.execute("""
                     INSERT INTO OrderDetails(OrderID, ProductID, Quantity, Price, Total)
                     VALUES (?, ?, ?, ?, ?)
                 """, (order_id, product_id, item["qty"], item["price"], item["total"]))
 
-                # Giảm stock trực tiếp
                 cursor.execute(
                     "UPDATE Products SET Stock = Stock - ? WHERE ProductID = ?",
                     (item["qty"], product_id)

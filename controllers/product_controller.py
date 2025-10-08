@@ -7,14 +7,21 @@ class ProductController:
     
     def get_products(self):
         products = self.product_model.get_all_products()
-        return jsonify(products)
+        return jsonify(products)\
+        
+    def get_product_by_id(self, id):
+        product = self.product_model.get_product_by_id(id)
+        if product:
+            return jsonify(product)
+        return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
     
     def create_product(self):
         data = request.json
         success = self.product_model.create_product(
-            data["barcode"], 
-            data["name"], 
-            data["price"]
+            data["Barcode"], 
+            data["Name"], 
+            data["Price"],
+            data["Stock"]
         )
         if success:
             return jsonify({"message": "Đã thêm sản phẩm"})
@@ -24,8 +31,9 @@ class ProductController:
         data = request.json
         success = self.product_model.update_product(
             product_id, 
-            data["name"], 
-            data["price"]
+            data["Name"], 
+            data["Price"],
+            data["Stock"]
         )
         if success:
             return jsonify({"message": "Đã cập nhật sản phẩm"})

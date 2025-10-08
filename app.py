@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, render_template, request
 from services.barcode_scanner import BarcodeScanner
 from controllers.product_controller import ProductController
 from controllers.cart_controller import CartController
@@ -23,19 +23,27 @@ def home():
     return render_template("order.html")
 
 # Product routes
+@app.route("/product")
+def product():
+    return render_template("product.html")
+
 @app.route("/products", methods=["GET"])
 def get_products():
     return product_controller.get_products()
 
-@app.route("/products", methods=["POST"])
+@app.route("/product/<int:id>", methods=["GET"])
+def get_product(id):
+    return product_controller.get_product_by_id(id)
+
+@app.route("/product", methods=["POST"])
 def create_product():
     return product_controller.create_product()
 
-@app.route("/products/<int:id>", methods=["PUT"])
+@app.route("/product/<int:id>", methods=["PUT"])
 def update_product(id):
     return product_controller.update_product(id)
 
-@app.route("/products/<int:id>", methods=["DELETE"])
+@app.route("/product/<int:id>", methods=["DELETE"])
 def delete_product(id):
     return product_controller.delete_product(id)
 
@@ -75,12 +83,18 @@ def invoice(order_id):
     return cart_controller.get_invoice_data(order_id)
 
 # Barcode routes
+@app.route('/get_barcode', methods=['GET'])
+def get_barcode():
+    result = scanner.get_barcode()
+    return jsonify(result)
+
 @app.route('/video_feed')
 def video_feed():
     return barcode_controller.video_feed()
 
-@app.route("/camera/start", methods=["POST"])
-def start_camera():
+@app.route("/camera/start/<int:mode>", methods=["POST"])
+def start_camera(mode):
+    scanner.set_mode(mode)
     scanner.start()
     return {"success": True, "message": "Camera đã bật"}
 

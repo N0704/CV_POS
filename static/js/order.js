@@ -65,15 +65,13 @@ class OrderSystem {
 
     async showOrderDetails(orderId) {
         try {
-            // Gọi API, encode để an toàn
             const items = await this.request(`/order/${orderId}`);
-            // Header & ngày
+            
             const titleEl = document.getElementById("orderModalTitle");
             const dateEl = document.getElementById("orderModalDate");
             if (titleEl) titleEl.innerText = `Đơn hàng #${orderId}`;
-            if (dateEl) dateEl.innerText = `Ngày: ${items[0].order_date || "-"}`;
+            if (dateEl) dateEl.innerText = `${items[0].order_date || "-"}`;
     
-            // Table sản phẩm
             const tbody = document.getElementById("orderModalBody");
             if (tbody) {
                 tbody.innerHTML = items.map(item => `
@@ -91,17 +89,14 @@ class OrderSystem {
                 `).join("");
             }
     
-            // Tổng thanh toán
             const total = items.reduce((sum, i) => sum + (i.total || 0), 0);
             const totalPaymentEl = document.querySelector("#orderModal .totalPayment");
             const grandTotalEl = document.querySelector("#orderModal .grandTotal");
             if (totalPaymentEl) totalPaymentEl.innerText = this.formatCurrency(total) + "₫";
             if (grandTotalEl) grandTotalEl.innerText = this.formatCurrency(total) + "₫";
     
-            // Lucide icons
-            if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
+            lucide.createIcons();
     
-            // Hiển thị modal
             this.showModal("orderModal");
     
         } catch (err) {
@@ -227,7 +222,7 @@ class OrderSystem {
 
     // ----------------- Cart actions -----------------
     startCartAutoRefresh() {
-        if (this.cartInterval) return; // tránh tạo trùng
+        if (this.cartInterval) return; 
         this.cartInterval = setInterval(() => this.loadCart(), 1000);
     }
 
@@ -340,6 +335,7 @@ class OrderSystem {
             this.exportInvoicePDF(result.order_id);
     
             this.loadCart();
+            this.loadOrder();
         } else {
             this.showToast("Thanh toán thất bại!", "Vui lòng thử lại sau.", "error");
         }
@@ -350,16 +346,14 @@ class OrderSystem {
         this.loadCart();
     }
 
-    async clearCartAndClose(modalId) {
+    async clearCart() {
         if (!confirm("Bạn có chắc muốn hủy đơn hàng?")) return;
         await this.request("/cart/clear", { method: "POST" });
         this.loadCart();
-        this.hideModal(modalId, { skipClear: true });
-        location.reload();
     }
 
     // ----------------- Camera -----------------
-    async startCamera() {
+    async startCamera(mode = 1) {
         const camEl = document.getElementById("video-feed");
         const loader = document.getElementById("camera-loading");
     
@@ -368,7 +362,7 @@ class OrderSystem {
             loader.classList.add("flex");
         }
     
-        await this.request("/camera/start", { method: "POST" });
+        await this.request(`/camera/start/${mode}`, { method: "POST" });
     
         if (camEl) {
             camEl.classList.add("hidden");
@@ -423,7 +417,7 @@ class OrderSystem {
         });
     }
 
-    hideModal(modalId, { skipClear = false } = {}) {
+    hideModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
     
@@ -432,7 +426,7 @@ class OrderSystem {
     
         if (modalId === "orderNewModal") {
             this.stopCamera();
-            if (!skipClear) this.clearCart();
+            this.clearCart();
         }
     }
 
@@ -448,11 +442,21 @@ class OrderSystem {
         }
           
         document.querySelectorAll(".closeNewOrderModal").forEach((btn) => {
-            btn.addEventListener("click", () => this.clearCartAndClose("orderNewModal"));
+            btn.addEventListener("click", () => this.hideModal("orderNewModal"));
         });
 
         const checkoutBtn = document.getElementById("checkout");
         if (checkoutBtn) checkoutBtn.addEventListener("click", () => this.checkout());
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const modalToOpen = urlParams.get("openModal");
+
+        if (modalToOpen) {
+            this.showModal(modalToOpen);
+
+            const newUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
     }
 }
 

@@ -19,10 +19,10 @@ class BarcodeScanner:
         # Data
         self.product_model = ProductModel()
         self.cart = {}
+        self.mode = 1 
 
-    # ---------- Camera ----------
+    # ---------------- Camera ----------------
     def start(self):
-        """Bật camera"""
         if not self.is_scanning:
             self.cap = cv2.VideoCapture(self.camera_index)
             if not self.cap.isOpened():
@@ -30,7 +30,6 @@ class BarcodeScanner:
             self.is_scanning = True
 
     def stop(self):
-        """Tắt camera"""
         if self.is_scanning:
             self.is_scanning = False
             if self.cap:
@@ -38,71 +37,87 @@ class BarcodeScanner:
                 self.cap = None
             cv2.destroyAllWindows()
 
+    def set_mode(self, mode: int):
+        self.mode = mode
+
     def generate_frames(self):
-        """Stream video frames và quét barcode"""
+        """Yield các frame JPEG cho streaming."""
         while self.is_scanning and self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
             if not ret:
                 break
+            self.scan_barcodes(frame, self.mode)
 
-            # Quét barcode trên frame
-            self.scan_barcodes(frame)
-
-            # Encode JPEG để gửi về web
             ret, buffer = cv2.imencode(".jpg", frame)
-            if not ret:
-                continue
+            if ret:
+                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" +
+                       buffer.tobytes() + b"\r\n")
 
-            yield (b"--frame\r\n"
-                   b"Content-Type: image/jpeg\r\n\r\n" +
-                   buffer.tobytes() + b"\r\n")
+            time.sleep(0.01)
 
-            time.sleep(0.01)  # tránh CPU 100%
-
-    # ---------- Barcode ----------
-    def scan_barcodes(self, frame):
+    # ---------------- Barcode ----------------
+    def scan_barcodes(self, frame, mode=None):
+        """Scan barcode và xử lý theo mode."""
+        mode = mode or self.mode
         now = time.time()
         if now - self.last_scan < self.cooldown:
-            return None, None
-        
-        barcodes = decode(frame)
-        
-        if not barcodes:
-            enhanced = cv2.convertScaleAbs(frame, alpha=1.5, beta=40)  
-            barcodes = decode(enhanced)
+            return None
 
-        if not barcodes:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            equalized = cv2.equalizeHist(gray)
-            barcodes = decode(equalized)
+        barcode = self._decode_barcode(frame)
+        if not barcode:
+            return None
 
-        if barcodes:
-            b = barcodes[0]
-            barcode = b.data.decode("utf-8")
-            product = self.product_model.get_product_by_barcode(barcode)
+        product = self.product_model.get_product_by_barcode(barcode)
+        self._draw_barcode(frame, barcode)
 
-            (x, y, w, h) = b.rect
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        self.last_scan = now
 
+        if mode == 1 and product:
+            self._add_to_cart(barcode, product)
+            self._beep()
+        elif mode == 2:
             if product:
-                self._add_to_cart(barcode, product)
-                self._beep()
-                self.last_scan = now
-                return barcode, product["name"]
+                return {'success': False, 'message': "Sản phẩm này đã tồn tại."}
+            self._beep()
+            return {'success': True, 'barcode': barcode}
 
-        return None, None
+        return None
 
+    def _decode_barcode(self, frame):
+        """Decode barcode với các phương pháp cải thiện độ chính xác."""
+        barcodes = decode(frame)
+        if barcodes:
+            return barcodes[0].data.decode("utf-8")
+
+        # Thử enhance frame
+        enhanced = cv2.convertScaleAbs(frame, alpha=1.5, beta=40)
+        barcodes = decode(enhanced)
+        if barcodes:
+            return barcodes[0].data.decode("utf-8")
+
+        # Thử grayscale + equalize
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        equalized = cv2.equalizeHist(gray)
+        barcodes = decode(equalized)
+        if barcodes:
+            return barcodes[0].data.decode("utf-8")
+
+        return None
+
+    def _draw_barcode(self, frame, barcode_value):
+        for b in decode(frame):
+            if b.data.decode("utf-8") == barcode_value:
+                x, y, w, h = b.rect
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     def _beep(self):
-        """Âm báo sau khi quét thành công"""
         try:
-            winsound.Beep(1000, 200)  # chỉ Windows
+            winsound.Beep(1000, 200)
         except Exception:
             pass
 
-    # ---------- Cart ----------
+    # ---------------- Cart ----------------
     def _add_to_cart(self, barcode, product):
-        """Thêm sản phẩm vào giỏ"""
         if barcode in self.cart:
             self.cart[barcode]["qty"] += 1
         else:
@@ -115,7 +130,6 @@ class BarcodeScanner:
         self.cart[barcode]["total"] = self.cart[barcode]["qty"] * self.cart[barcode]["price"]
 
     def update_quantity(self, barcode, qty):
-        """Cập nhật số lượng sản phẩm"""
         if barcode not in self.cart:
             return
         if qty > 0:
@@ -125,13 +139,28 @@ class BarcodeScanner:
             self.remove_item(barcode)
 
     def remove_item(self, barcode):
-        """Xóa sản phẩm khỏi giỏ"""
         self.cart.pop(barcode, None)
 
     def clear_cart(self):
-        """Xóa toàn bộ giỏ"""
         self.cart.clear()
 
     def get_cart(self):
-        """Lấy dữ liệu giỏ hàng"""
         return self.cart
+
+    # ---------------- Scan one barcode ----------------
+    def get_barcode(self, mode=2):
+        """Quét một barcode từ camera."""
+        if not self.cap or not self.cap.isOpened():
+            return {'success': False, 'message': 'Camera chưa mở'}
+
+        ret, frame = self.cap.read()
+        if not ret:
+            return {'success': False, 'message': 'Không đọc được frame'}
+
+        result = self.scan_barcodes(frame, mode)
+        if result is None:
+            return {'success': False, 'message': 'Chưa quét được barcode'}
+
+        return result
+
+        
