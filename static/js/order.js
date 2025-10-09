@@ -335,7 +335,6 @@ class OrderSystem {
             this.exportInvoicePDF(result.order_id);
     
             this.loadCart();
-            this.loadOrder();
         } else {
             this.showToast("Thanh toán thất bại!", "Vui lòng thử lại sau.", "error");
         }
@@ -350,6 +349,7 @@ class OrderSystem {
         if (!confirm("Bạn có chắc muốn hủy đơn hàng?")) return;
         await this.request("/cart/clear", { method: "POST" });
         this.loadCart();
+        this.loadOrder();
     }
 
     // ----------------- Camera -----------------
