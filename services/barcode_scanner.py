@@ -14,7 +14,6 @@ class BarcodeScanner:
 
         # Barcode scan
         self.last_scan = 0
-        self.last_barcode = None
         self.cooldown = cooldown
 
         # Data
@@ -68,8 +67,8 @@ class BarcodeScanner:
         if not barcode:
             return None
 
-        self.last_scan = now
-        self.last_barcode = barcode
+        elapsed = time.time() - now 
+        print(f"Thời gian nhận: {elapsed:.2f} giây")
 
         product = self.product_model.get_product_by_barcode(barcode)
         self._draw_barcode(frame, barcode)
@@ -86,17 +85,21 @@ class BarcodeScanner:
         return None
 
     def _decode_barcode(self, frame):
-        barcodes = decode(frame) 
-        if barcodes: 
-            return barcodes[0].data.decode("utf-8")
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        barcodes = decode(gray)
+        barcodes = decode(frame)
         if barcodes:
             return barcodes[0].data.decode("utf-8")
 
-        # Thử tăng tương phản nếu chưa có kết quả
-        enhanced = cv2.convertScaleAbs(gray, alpha=1.5, beta=30)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+
+        barcodes = decode(blurred)
+        if barcodes:
+            return barcodes[0].data.decode("utf-8")
+
+        enhanced = cv2.convertScaleAbs(blurred, alpha=1.8, beta=40)
+
         barcodes = decode(enhanced)
         if barcodes:
             return barcodes[0].data.decode("utf-8")
@@ -151,7 +154,7 @@ class BarcodeScanner:
     # ---------------- Scan one barcode ----------------
     def get_barcode(self, mode=2, timeout=5):
         if not self.cap or not self.cap.isOpened():
-            return {'success': False, 'message': 'Camera chưa mở'}
+            self.start()
 
         start_time = time.time()
         while time.time() - start_time < timeout:
