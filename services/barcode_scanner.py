@@ -14,17 +14,18 @@ class BarcodeScanner:
 
         # Barcode scan
         self.last_scan = 0
+        self.last_barcode = None
         self.cooldown = cooldown
 
         # Data
         self.product_model = ProductModel()
         self.cart = {}
-        self.mode = 1 
+        self.mode = 1
 
     # ---------------- Camera ----------------
     def start(self):
         if not self.is_scanning:
-            self.cap = cv2.VideoCapture(self.camera_index)
+            self.cap = cv2.VideoCapture(self.camera_index)  # nhanh hơn CAP_ANY
             if not self.cap.isOpened():
                 raise RuntimeError("Không mở được camera")
             self.is_scanning = True
@@ -42,18 +43,18 @@ class BarcodeScanner:
 
     def generate_frames(self):
         """Yield các frame JPEG cho streaming."""
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 80]  # giảm kích thước để nhanh hơn
         while self.is_scanning and self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
             if not ret:
                 break
+
             self.scan_barcodes(frame, self.mode)
 
-            ret, buffer = cv2.imencode(".jpg", frame)
+            ret, buffer = cv2.imencode(".jpg", frame, encode_param)
             if ret:
                 yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" +
                        buffer.tobytes() + b"\r\n")
-
-            time.sleep(0.01)
 
     # ---------------- Barcode ----------------
     def scan_barcodes(self, frame, mode=None):
@@ -67,38 +68,36 @@ class BarcodeScanner:
         if not barcode:
             return None
 
+        self.last_scan = now
+        self.last_barcode = barcode
+
         product = self.product_model.get_product_by_barcode(barcode)
         self._draw_barcode(frame, barcode)
-
-        self.last_scan = now
 
         if mode == 1 and product:
             self._add_to_cart(barcode, product)
             self._beep()
         elif mode == 2:
+            self._beep()
             if product:
                 return {'success': False, 'message': "Sản phẩm này đã tồn tại."}
-            self._beep()
             return {'success': True, 'barcode': barcode}
 
         return None
 
     def _decode_barcode(self, frame):
-        """Decode barcode với các phương pháp cải thiện độ chính xác."""
-        barcodes = decode(frame)
-        if barcodes:
+        barcodes = decode(frame) 
+        if barcodes: 
             return barcodes[0].data.decode("utf-8")
 
-        # Thử enhance frame
-        enhanced = cv2.convertScaleAbs(frame, alpha=1.5, beta=40)
-        barcodes = decode(enhanced)
-        if barcodes:
-            return barcodes[0].data.decode("utf-8")
-
-        # Thử grayscale + equalize
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        equalized = cv2.equalizeHist(gray)
-        barcodes = decode(equalized)
+        barcodes = decode(gray)
+        if barcodes:
+            return barcodes[0].data.decode("utf-8")
+
+        # Thử tăng tương phản nếu chưa có kết quả
+        enhanced = cv2.convertScaleAbs(gray, alpha=1.5, beta=30)
+        barcodes = decode(enhanced)
         if barcodes:
             return barcodes[0].data.decode("utf-8")
 
@@ -109,17 +108,19 @@ class BarcodeScanner:
             if b.data.decode("utf-8") == barcode_value:
                 x, y, w, h = b.rect
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                break
 
     def _beep(self):
         try:
-            winsound.Beep(1000, 200)
+            winsound.Beep(1200, 120)  # ngắn & cao để nhanh
         except Exception:
             pass
 
     # ---------------- Cart ----------------
     def _add_to_cart(self, barcode, product):
-        if barcode in self.cart:
-            self.cart[barcode]["qty"] += 1
+        item = self.cart.get(barcode)
+        if item:
+            item["qty"] += 1
         else:
             self.cart[barcode] = {
                 "id": product["id"],
@@ -148,19 +149,18 @@ class BarcodeScanner:
         return self.cart
 
     # ---------------- Scan one barcode ----------------
-    def get_barcode(self, mode=2):
-        """Quét một barcode từ camera."""
+    def get_barcode(self, mode=2, timeout=5):
         if not self.cap or not self.cap.isOpened():
             return {'success': False, 'message': 'Camera chưa mở'}
 
-        ret, frame = self.cap.read()
-        if not ret:
-            return {'success': False, 'message': 'Không đọc được frame'}
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            ret, frame = self.cap.read()
+            if not ret:
+                return {'success': False, 'message': 'Không đọc được frame'}
 
-        result = self.scan_barcodes(frame, mode)
-        if result is None:
-            return {'success': False, 'message': 'Chưa quét được barcode'}
+            result = self.scan_barcodes(frame, mode)
+            if result is not None:
+                return result
 
-        return result
-
-        
+        return {'success': False, 'message': 'Không nhận được barcode'}
