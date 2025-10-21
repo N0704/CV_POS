@@ -31,7 +31,6 @@ class CartController:
         self.barcode_scanner.remove_item(barcode)
         return jsonify({"success": True, "cart": self.barcode_scanner.get_cart()})
 
-    # ----------------- Xuất hóa đơn PDF -----------------
     def get_invoice_data(self, order_id):
         order = self.order_model.get_order_by_id(order_id)
         items = self.order_model.get_order_details(order_id)

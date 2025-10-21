@@ -13,7 +13,6 @@
     <div class="flex h-screen overflow-hidden">
       <div class="w-64 flex-shrink-0">
         <aside class="flex flex-col min-h-screen pl-6 pr-3.5 bg-neutral-50">
-          <!-- Logo -->
           <img
             src="/static/assets/pomo-logo.png"
             alt="Logo"
@@ -55,7 +54,6 @@
             </div>
           </div>
 
-          <!-- Cá nhân -->
           <div class="flex flex-col py-5 gap-3">
             <p class="text-sm text-neutral-400/80 px-2.5 pb-1.5">Cá nhân</p>
 
@@ -74,7 +72,6 @@
             </div>
           </div>
 
-          <!-- Profile -->
           <div class="mt-auto flex items-center py-4 px-1 gap-2 cursor-pointer">
             <img
               src="https://lh3.googleusercontent.com/p/AF1QipMCbv0TsvStgUOQVsk3oioCT9TXnbZu5YQDBWRh=s680-w680-h510-rw"
@@ -95,12 +92,10 @@
           <div
             class="rounded-xl bg-white h-full border border-solid border-neutral-100/80"
           >
-            <!-- Header -->
             <header
               class="px-10 py-6 border-b border-solid border-neutral-100/80"
             >
               <div class="flex justify-between items-center">
-                <!-- Search box -->
                 <div
                   class="flex items-center gap-2 w-64 h-9 border border-solid border-neutral-200/80 rounded-xl px-2.5"
                 >
@@ -112,7 +107,6 @@
                   />
                 </div>
 
-                <!-- Button -->
                 <button
                   id="openNewOrderModal"
                   class="bg-primary w-32 h-9 rounded-lg flex items-center justify-center gap-2 px-1 cursor-pointer hover:scale-95 duration-300"
@@ -123,7 +117,6 @@
               </div>
             </header>
 
-            <!-- Main -->
             <main class="p-8">
               <div class="flex flex-col pb-5 gap-1">
                 <h1 class="text-xl capitalize font-semibold">
@@ -162,7 +155,6 @@
                 </div>
               </div>
 
-              <!-- Bảng -->
               <div
                 class="overflow-x-auto rounded-xl border border-solid border-neutral-100/80"
               >
@@ -187,7 +179,6 @@
       </div>
     </div>
 
-    <!-- New Order Modal -->
     <div
       id="orderNewModal"
       class="fixed inset-0 items-center justify-center bg-black/50 hidden"
@@ -195,7 +186,6 @@
       <div
         class="bg-white w-[85vw] rounded-lg shadow-lg flex flex-col h-[90vh] overflow-hidden"
       >
-        <!-- Header -->
         <div
           class="flex justify-between items-center px-6 py-5 border-b border-neutral-200 bg-primary text-white"
         >
@@ -207,7 +197,6 @@
           </button>
         </div>
 
-        <!-- Body -->
         <div class="grid grid-cols-3 justify-between gap-4 px-8 py-6">
           <div class="col-span-1 flex flex-col gap-4">
             <div
@@ -253,7 +242,6 @@
             </div>
           </div>
 
-          <!-- Bảng sản phẩm -->
           <div
             class="col-span-2 rounded-xl border border-solid border-neutral-200/80 overflow-x-auto"
           >
@@ -272,7 +260,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
         <div
           class="px-10 py-4 flex items-center justify-between mt-auto border-t border-neutral-100"
         >
@@ -296,9 +283,7 @@
         </div>
       </div>
     </div>
-    <!-- End New Order Modal -->
 
-    <!-- Detail Modal -->
     <div
       id="orderModal"
       class="fixed inset-0 items-center justify-center bg-black/50 hidden"
@@ -306,7 +291,6 @@
       <div
         class="bg-white w-[900px] rounded-lg shadow-lg flex flex-col min-h-[550px] overflow-hidden"
       >
-        <!-- Header -->
         <div
           class="flex justify-between items-center px-6 py-5 border-b border-neutral-200 bg-primary text-white"
         >
@@ -320,7 +304,6 @@
           </button>
         </div>
 
-        <!-- Body -->
         <div class="overflow-y-auto max-h-[70vh]">
           <div class="flex flex-col gap-4 px-10 py-6">
             <div class="flex justify-between">
@@ -346,7 +329,6 @@
               </div>
             </div>
 
-            <!-- Table -->
             <div
               class="overflow-x-auto rounded-xl border border-solid border-neutral-200/80"
             >
@@ -390,7 +372,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
         <div
           class="px-10 py-4 flex justify-end mt-auto border-t border-neutral-100"
         >
@@ -402,9 +383,7 @@
         </div>
       </div>
     </div>
-    <!-- End Detail Modal -->
 
-    <!-- Toast Notification -->
     <div
       id="toast-container"
       class="fixed top-4 right-4 flex flex-col gap-2 z-50"

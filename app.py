@@ -103,8 +103,6 @@ def stop_camera():
     scanner.stop()
     return {"success": True, "message": "Camera đã tắt"}
 
-
-# Cleanup
 def cleanup():
     scanner.stop()
 
