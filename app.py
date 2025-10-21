@@ -8,21 +8,17 @@ import atexit
 
 app = Flask(__name__)
 
-# Services
 scanner = BarcodeScanner()
 
-# Controllers
 product_controller = ProductController()
 order_controller = OrderController()
 cart_controller = CartController(scanner)
 barcode_controller = BarcodeController(scanner)
 
-# Home
 @app.route("/")
 def home():
     return render_template("order.html")
 
-# Product routes
 @app.route("/product")
 def product():
     return render_template("product.html")
@@ -47,7 +43,6 @@ def update_product(id):
 def delete_product(id):
     return product_controller.delete_product(id)
 
-# Order routes
 @app.route("/order", methods=["GET"])
 def get_all_orders():
     return order_controller.get_all_orders()
@@ -56,7 +51,6 @@ def get_all_orders():
 def get_order_details(order_id):
     return order_controller.get_order_details(order_id)
 
-# Cart routes
 @app.route("/cart", methods=["GET"])
 def get_cart():
     return cart_controller.get_cart()
@@ -82,7 +76,6 @@ def checkout():
 def invoice(order_id):
     return cart_controller.get_invoice_data(order_id)
 
-# Barcode routes
 @app.route('/get_barcode', methods=['GET'])
 def get_barcode():
     result = scanner.get_barcode()
